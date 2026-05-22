@@ -11,7 +11,10 @@ STATE_KEY = "brkb_pb_level"
 
 
 def run(state: dict[str, Any]) -> str | None:
-    pb = yahoo.get_pb_ratio("BRK-B")
+    # Query BRK-A: yfinance returns BRK-A's per-share book value for both classes,
+    # so BRK-B's reported bookValue is wrong (off by ~1500x). P/B is identical
+    # across share classes since A and B are economically proportional.
+    pb = yahoo.get_pb_ratio("BRK-A")
     if pb is None:
         # Could not fetch P/B — leave state alone, do not notify.
         return None

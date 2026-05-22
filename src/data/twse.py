@@ -63,7 +63,7 @@ def fetch_overall_margin_maintenance_ratio() -> float | None:
 
 def _fetch_per_stock_margin() -> dict[str, float]:
     """Return {Code: 融資今日餘額(張)} from TWSE OpenAPI."""
-    resp = requests.get(MARGIN_PER_STOCK_URL, timeout=20)
+    resp = requests.get(MARGIN_PER_STOCK_URL, timeout=30)
     resp.raise_for_status()
     rows = resp.json() or []
     out: dict[str, float] = {}
@@ -79,7 +79,7 @@ def _fetch_per_stock_margin() -> dict[str, float]:
 
 def _fetch_all_stock_closes() -> dict[str, float]:
     """Return {Code: ClosingPrice} from TWSE OpenAPI."""
-    resp = requests.get(STOCK_DAY_ALL_URL, timeout=20)
+    resp = requests.get(STOCK_DAY_ALL_URL, timeout=30)
     resp.raise_for_status()
     rows = resp.json() or []
     out: dict[str, float] = {}
@@ -101,7 +101,7 @@ def _fetch_total_margin_loan_ntd() -> float | None:
     """
     # No `date` param → endpoint returns the most recent published date.
     url = f"{MARGIN_TOTAL_URL}?response=json&selectType=MS"
-    resp = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+    resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
     resp.raise_for_status()
     payload = resp.json()
     if payload.get("stat") != "OK":
