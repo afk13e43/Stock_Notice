@@ -19,6 +19,35 @@
 - 回升不重推；回升後再跌過同門檻，會再次通知。
 - 多個 check 同時觸發時，會合併成一則 Discord 訊息送出（避免 rate limit）。
 
+## 歷史紀錄 CSV
+
+每次跑完都會把當下的指標數值寫進 `history/{tw,us}_history.csv`，一日一列。同一日重跑會覆寫該列（手動觸發 workflow 不會產生重複）。可以直接拖進 Excel / Google Sheets 看趨勢。
+
+`history/tw_history.csv` 欄位：
+
+| 欄位 | 說明 |
+|---|---|
+| `date` | 資料日期（^TWII 最新交易日，YYYY-MM-DD） |
+| `twii_close` | 台股加權收盤 |
+| `twii_ath` | 至今歷史最高收盤 |
+| `twii_drawdown_pct` | 自 ATH 回檔百分比 |
+| `twii_ma240` | 240 日移動平均 |
+| `twii_below_ma240` | 是否跌破 MA240（true/false） |
+| `margin_ratio_pct` | 上市市場融資維持率（自行計算） |
+| `usdtwd_rate` | 美元兌台幣匯率 |
+
+`history/us_history.csv` 欄位：
+
+| 欄位 | 說明 |
+|---|---|
+| `date` | 資料日期（VOO 最新交易日，YYYY-MM-DD） |
+| `voo_close` | VOO 收盤 |
+| `voo_ath` | 至今歷史最高收盤 |
+| `voo_drawdown_pct` | 自 ATH 回檔百分比 |
+| `brkb_pb_ratio` | BRK.B P/B（取自 BRK-A 資料） |
+
+若某項抓取失敗，該欄位留空，不會卡住整列。
+
 ## 設定步驟
 
 1. 在 Discord 目標頻道建立 Webhook（齒輪 → 整合 → Webhook → 新增 → 複製 URL）。
@@ -96,6 +125,7 @@ src/
   main.py            # 入口
   notifier.py        # Discord webhook
   state.py           # state.json + threshold-crossing 邏輯
+  history.py         # CSV 歷史紀錄 (append-or-replace by date)
   data/
     yahoo.py         # yfinance 包裝（含 P/B sanity check）
     twse.py          # TWSE OpenAPI + 維持率計算
@@ -106,6 +136,9 @@ scripts/
   taiwan-market.yml
   us-market.yml
 state/
-  tw_state.json
+  tw_state.json      # 通知用門檻狀態
   us_state.json
+history/
+  tw_history.csv     # 每日指標歷史紀錄
+  us_history.csv
 ```
