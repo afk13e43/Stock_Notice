@@ -10,21 +10,31 @@ THRESHOLDS = [10, 20, 30]
 STATE_KEY = "tw_drawdown_level"
 
 
-def run(state: dict[str, Any]) -> str | None:
+def run(state: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     df = yahoo.history("^TWII", period="max").dropna(subset=["Close"])
     close = df["Close"]
     ath = close.cummax()
-    dd_pct = float((1 - close.iloc[-1] / ath.iloc[-1]) * 100)
+    last_close = float(close.iloc[-1])
+    last_ath = float(ath.iloc[-1])
+    dd_pct = (1 - last_close / last_ath) * 100
     current_level = drawdown_level(dd_pct, THRESHOLDS)
     stored = int(state.get(STATE_KEY, 0))
 
-    state[STATE_KEY] = current_level  # store latest regardless
+    state[STATE_KEY] = current_level
+    date = df.index[-1].strftime("%Y-%m-%d")
 
+    metrics = {
+        "date": date,
+        "twii_close": last_close,
+        "twii_ath": last_ath,
+        "twii_drawdown_pct": dd_pct,
+    }
+
+    msg = None
     if should_notify_ladder_drawdown(stored, current_level):
-        date = df.index[-1].strftime("%Y-%m-%d")
-        return (
+        msg = (
             f"🚨 **台股大盤回檔達 {dd_pct:.1f}%**（跨越 -{current_level}% 門檻）\n"
-            f"收盤：{close.iloc[-1]:,.2f} / ATH：{ath.iloc[-1]:,.2f}\n"
+            f"收盤：{last_close:,.2f} / ATH：{last_ath:,.2f}\n"
             f"日期：{date}"
         )
-    return None
+    return msg, metrics

@@ -10,19 +10,21 @@ THRESHOLD = 135.0
 STATE_KEY = "tw_margin_below_135"
 
 
-def run(state: dict[str, Any]) -> str | None:
+def run(state: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     ratio = twse.fetch_overall_margin_maintenance_ratio()
     if ratio is None:
-        # TWSE returned nothing (holiday) — leave state alone.
-        return None
+        return None, {}
 
     below = ratio < THRESHOLD
     stored = bool(state.get(STATE_KEY, False))
     state[STATE_KEY] = below
 
+    metrics = {"margin_ratio_pct": ratio}
+
+    msg = None
     if should_notify_bool(stored, below):
-        return (
+        msg = (
             f"🚨 **台股融資維持率跌破 {THRESHOLD:.0f}%**\n"
             f"目前整體市場融資維持率：{ratio:.2f}%"
         )
-    return None
+    return msg, metrics

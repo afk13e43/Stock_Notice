@@ -10,16 +10,19 @@ THRESHOLD = 30.0
 STATE_KEY = "usdtwd_below_30"
 
 
-def run(state: dict[str, Any]) -> str | None:
+def run(state: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     date, rate = yahoo.latest_close("TWD=X", period="1mo")
     below = rate < THRESHOLD
     stored = bool(state.get(STATE_KEY, False))
     state[STATE_KEY] = below
 
+    metrics = {"usdtwd_rate": rate}
+
+    msg = None
     if should_notify_bool(stored, below):
-        return (
+        msg = (
             f"💱 **美元兌台幣跌破 {THRESHOLD:.0f}**\n"
             f"目前匯率：{rate:.4f}\n"
             f"日期：{date.strftime('%Y-%m-%d')}"
         )
-    return None
+    return msg, metrics
