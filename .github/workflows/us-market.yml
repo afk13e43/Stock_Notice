@@ -1,0 +1,41 @@
+name: US Market Check
+
+on:
+  schedule:
+    # 17:30 US Eastern (post-close) ≈ 22:30 UTC during EDT / 21:30 UTC during EST.
+    # Cron runs in UTC; we pick 22:30 UTC which is 17:30 EST or 18:30 EDT — late
+    # enough that the close-of-day bar is available on Yahoo Finance year-round.
+    - cron: '30 22 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run US checks
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python -m src.main --market us
+
+      - name: Commit state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/us_state.json
+          if ! git diff --quiet --cached; then
+            git commit -m "chore: update us_state [skip ci]"
+            git push
+          fi
