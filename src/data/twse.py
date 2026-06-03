@@ -1,6 +1,7 @@
 """TWSE data fetchers — OpenAPI + one legacy endpoint for the daily total loan."""
 from __future__ import annotations
 
+import json
 import sys
 
 import requests
@@ -61,11 +62,28 @@ def fetch_overall_margin_maintenance_ratio() -> float | None:
     return ratio
 
 
+def _safe_json(url: str, label: str, headers: dict | None = None):
+    """GET url and parse JSON. Returns None on any network/JSON failure with stderr log."""
+    try:
+        resp = requests.get(url, timeout=30, headers=headers or {})
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        print(f"[twse] {label}: network error: {e}", file=sys.stderr)
+        return None
+    try:
+        return resp.json()
+    except (json.JSONDecodeError, ValueError) as e:
+        snippet = resp.text[:200].replace("\n", " ")
+        print(
+            f"[twse] {label}: non-JSON response ({e}); status={resp.status_code} body={snippet!r}",
+            file=sys.stderr,
+        )
+        return None
+
+
 def _fetch_per_stock_margin() -> dict[str, float]:
     """Return {Code: 融資今日餘額(張)} from TWSE OpenAPI."""
-    resp = requests.get(MARGIN_PER_STOCK_URL, timeout=30)
-    resp.raise_for_status()
-    rows = resp.json() or []
+    rows = _safe_json(MARGIN_PER_STOCK_URL, "MI_MARGN per-stock") or []
     out: dict[str, float] = {}
     for r in rows:
         if not isinstance(r, dict):
@@ -79,9 +97,7 @@ def _fetch_per_stock_margin() -> dict[str, float]:
 
 def _fetch_all_stock_closes() -> dict[str, float]:
     """Return {Code: ClosingPrice} from TWSE OpenAPI."""
-    resp = requests.get(STOCK_DAY_ALL_URL, timeout=30)
-    resp.raise_for_status()
-    rows = resp.json() or []
+    rows = _safe_json(STOCK_DAY_ALL_URL, "STOCK_DAY_ALL") or []
     out: dict[str, float] = {}
     for r in rows:
         if not isinstance(r, dict):
@@ -101,10 +117,8 @@ def _fetch_total_margin_loan_ntd() -> float | None:
     """
     # No `date` param → endpoint returns the most recent published date.
     url = f"{MARGIN_TOTAL_URL}?response=json&selectType=MS"
-    resp = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
-    resp.raise_for_status()
-    payload = resp.json()
-    if payload.get("stat") != "OK":
+    payload = _safe_json(url, "MI_MARGN MS total", headers={"User-Agent": "Mozilla/5.0"})
+    if not payload or payload.get("stat") != "OK":
         return None
 
     for table in payload.get("tables", []):
