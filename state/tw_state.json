@@ -1,5 +1,5 @@
 {
-  "tw_drawdown_level": 0,
+  "tw_drawdown_level": 10,
   "tw_below_ma240": false,
   "usdtwd_below_30": false,
   "tw_margin_below_135": false
